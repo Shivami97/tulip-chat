@@ -8,6 +8,11 @@ const app = express();
 
 // Allow connections from local and production frontend
 const origin = process.env.FRONTEND_URL || "http://localhost:5173";
+
+app.get("/", (req, res) => {
+  res.send("Server is running... Tulip Chat Backend is Live!");
+});
+
 app.use(cors({
   origin: true, // Allow all origins for easier local network access
   methods: ["GET", "POST"],
