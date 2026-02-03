@@ -8,29 +8,17 @@ const app = express();
 
 // Allow connections from local and production frontend
 const origin = process.env.FRONTEND_URL || "http://localhost:5173";
-const allowedOrigins = [
-  "http://localhost:5173",
-  origin // This will be your future Vercel URL
-];
-
 app.use(cors({
-  origin: function (origin, callback) {
-    // allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      var msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
-  },
-  methods: ["GET", "POST"]
+  origin: true, // Allow all origins for easier local network access
+  methods: ["GET", "POST"],
+  credentials: true
 }));
 
 const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: origin,
+    origin: "*", // Allow all origins for Socket.IO
     methods: ["GET", "POST"],
   },
 });
@@ -44,6 +32,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("send_message", (data) => {
+    console.log(`Message from ${data.author} in room ${data.room}: ${data.message}`);
     socket.to(data.room).emit("receive_message", data);
   });
 
