@@ -15,7 +15,6 @@ function Chat({ socket, username, room, setJoined }) {
   const handleTyping = (e) => {
     setCurrentMessage(e.target.value);
 
-    // Start typing
     if (!typing) {
       setTyping(true);
 
@@ -25,10 +24,8 @@ function Chat({ socket, username, room, setJoined }) {
       });
     }
 
-    // Clear old timeout
     clearTimeout(typingTimeout.current);
 
-    // Stop typing after 1 sec
     typingTimeout.current = setTimeout(() => {
       setTyping(false);
 
@@ -50,11 +47,12 @@ function Chat({ socket, username, room, setJoined }) {
           new Date().getHours() +
           ":" +
           new Date().getMinutes().toString().padStart(2, "0"),
+        seen: false, // 👈 For double tick
       };
 
       await socket.emit("send_message", messageData);
 
-      // Stop typing when sent
+      // Stop typing
       socket.emit("stop_typing", {
         room,
         author: username,
@@ -87,18 +85,41 @@ function Chat({ socket, username, room, setJoined }) {
       setTypingUser("");
     });
 
-    // Cleanup
+    // Message seen update
+    socket.on("message_seen_update", (data) => {
+      setMessageList((list) =>
+        list.map((msg) =>
+          msg.time === data.time && msg.author === username
+            ? { ...msg, seen: true }
+            : msg
+        )
+      );
+    });
+
     return () => {
       socket.off("receive_message");
       socket.off("user_typing");
       socket.off("user_stop_typing");
+      socket.off("message_seen_update");
     };
   }, [socket, username]);
 
-  // Auto scroll
+  // Auto scroll + mark seen
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messageList]);
+
+    if (messageList.length > 0) {
+      const lastMsg = messageList[messageList.length - 1];
+
+      // If other user's message → mark as seen
+      if (lastMsg.author !== username && !lastMsg.seen) {
+        socket.emit("message_seen", {
+          room,
+          time: lastMsg.time,
+        });
+      }
+    }
+  }, [messageList, socket, username]);
 
   return (
     <div className="chat-window fade-in">
@@ -146,6 +167,14 @@ function Chat({ socket, username, room, setJoined }) {
 
             <div className="message-meta">
               <span>{msg.time}</span>
+
+              {/* Seen Tick */}
+              {username === msg.author && (
+                <span className="seen-status">
+                  {msg.seen ? "✔✔" : "✔"}
+                </span>
+              )}
+
               <span className="author">{msg.author}</span>
             </div>
           </div>
