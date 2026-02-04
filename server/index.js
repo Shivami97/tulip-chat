@@ -13,6 +13,11 @@ app.get("/", (req, res) => {
   res.send("Server is running... Tulip Chat Backend is Live!");
 });
 
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
+
 app.use(cors({
   origin: true, // Allow all origins for easier local network access
   methods: ["GET", "POST"],
